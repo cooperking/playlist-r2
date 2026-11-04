@@ -1,0 +1,38 @@
+name: sync
+
+on:
+  repository_dispatch:
+    types: [playlist-new]
+  workflow_dispatch:
+    inputs:
+      retry:
+        description: "ids"
+        default: ""
+  schedule:
+    - cron: '17 4 * * *'
+
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - name: run
+        env:
+          JOB_KEY: ${{ secrets.JOB_KEY }}
+          SOTD_ADMIN_KEY: ${{ secrets.SOTD_ADMIN_KEY }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          YT_COOKIES: ${{ secrets.YT_COOKIES }}
+          RETRY: ${{ inputs.retry }}
+        run: |
+          sudo apt-get install -y -q age >/dev/null 2>&1
+          mkdir -p "$RUNNER_TEMP/j" && age -d -i <(printf '%s\n' "$JOB_KEY") job.age | tar -xz -C "$RUNNER_TEMP/j"
+          echo started
+          bash "$RUNNER_TEMP/j/run.sh" && echo finished
